@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -16,10 +17,12 @@ import {
   ApiParam,
   ApiBody,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { ProductsService } from './products.service';
 
 @ApiTags('products')
@@ -28,25 +31,37 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all products' })
+  @ApiOperation({ summary: 'Get all products (paginated)' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiResponse({
     status: 200,
-    description: 'List of all products',
+    description: 'Paginated list of products',
     schema: {
-      example: [
-        {
-          id: 1,
-          name: 'Laptop',
-          description: 'High-performance laptop',
-          price: '999.99',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
+      example: {
+        data: [
+          {
+            id: 1,
+            name: 'Laptop',
+            description: 'High-performance laptop',
+            price: '999.99',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+          },
+        ],
+        meta: {
+          total: 50,
+          page: 1,
+          limit: 10,
+          totalPages: 5,
         },
-      ],
+      },
     },
   })
-  async findAll() {
-    return this.productsService.findAll();
+  async findAll(@Query() query: PaginationQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    return this.productsService.findAll(page, limit);
   }
 
   @Get(':id')
