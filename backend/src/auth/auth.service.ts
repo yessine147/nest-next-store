@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { compare } from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/user.entity';
 
@@ -28,17 +28,22 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const isValid = await bcrypt.compare(password, user.passwordHash);
+    const isValid = await compare(password, user.passwordHash);
     if (!isValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
     return user;
   }
 
-  async login(user: User): Promise<{ accessToken: string }> {
+  async login(
+    user: User,
+    rememberMe?: boolean,
+  ): Promise<{ accessToken: string; expiresIn: string }> {
     const payload = { sub: user.id, email: user.email };
-    const accessToken = await this.jwtService.signAsync(payload);
-    return { accessToken };
+    const expiresIn = rememberMe ? '7d' : '1h';
+    const accessToken = await this.jwtService.signAsync(payload, {
+      expiresIn,
+    });
+    return { accessToken, expiresIn };
   }
 }
-

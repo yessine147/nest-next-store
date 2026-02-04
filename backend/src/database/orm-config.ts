@@ -1,6 +1,10 @@
 import { DataSourceOptions } from 'typeorm';
+import { config } from 'dotenv';
 import { User } from '../users/user.entity';
 import { Product } from '../products/product.entity';
+
+// Load .env file before reading environment variables
+config();
 
 export const dbOptions: DataSourceOptions = {
   type: 'postgres',
@@ -11,5 +15,5 @@ export const dbOptions: DataSourceOptions = {
   database: process.env.DB_NAME || 'nest_next_store',
   entities: [User, Product],
   migrations: ['dist/migrations/*.js'],
-  synchronize: false,
+  synchronize: true,
 };

@@ -11,9 +11,11 @@ import { LocalStrategy } from './strategies/local.strategy';
   imports: [
     UsersModule,
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'changeme',
-      signOptions: { expiresIn: '1h' },
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: process.env.JWT_SECRET || 'changeme',
+        signOptions: { expiresIn: '1h' }, // Default, can be overridden in service
+      }),
     }),
   ],
   controllers: [AuthController],
@@ -21,4 +23,3 @@ import { LocalStrategy } from './strategies/local.strategy';
   exports: [AuthService],
 })
 export class AuthModule {}
-
