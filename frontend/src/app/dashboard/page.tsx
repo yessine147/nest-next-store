@@ -104,6 +104,7 @@ export default function DashboardPage() {
             <ProductCard
               key={p.id}
               product={p}
+              onView={() => router.push(`/products/${p.id}`)}
               onEdit={() => router.push(`/products/${p.id}/edit`)}
               onDelete={() => handleDelete(p.id)}
             />

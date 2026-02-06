@@ -14,12 +14,18 @@ export default function NewProductPage() {
   const handleSubmit = async (values: ProductFormValues) => {
     try {
       setSubmitting(true);
-      // For now we send JSON; backend doesn't yet support image upload.
-      await api.post("/products", {
-        name: values.name,
-        description: values.description,
-        price: values.price,
-      });
+      const formData = new FormData();
+      formData.append("name", values.name);
+      if (values.description) {
+        formData.append("description", values.description);
+      }
+      formData.append("price", values.price);
+      const fileList = values.image as FileList | undefined;
+      const file = fileList?.[0];
+      if (file) {
+        formData.append("image", file);
+      }
+      await api.post("/products", formData);
       toast.success("Product created");
       router.push("/dashboard");
     } catch (error: unknown) {

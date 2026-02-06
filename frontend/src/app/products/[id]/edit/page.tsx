@@ -37,11 +37,18 @@ export default function EditProductPage() {
   const handleSubmit = async (values: ProductFormValues) => {
     try {
       setSubmitting(true);
-      await api.patch(`/products/${id}`, {
-        name: values.name,
-        description: values.description,
-        price: values.price,
-      });
+      const formData = new FormData();
+      formData.append("name", values.name);
+      if (values.description) {
+        formData.append("description", values.description);
+      }
+      formData.append("price", values.price);
+      const fileList = values.image as FileList | undefined;
+      const file = fileList?.[0];
+      if (file) {
+        formData.append("image", file);
+      }
+      await api.patch(`/products/${id}`, formData);
       toast.success("Product updated");
       router.push("/dashboard");
     } catch (error: unknown) {

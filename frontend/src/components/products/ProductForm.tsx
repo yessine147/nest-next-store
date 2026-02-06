@@ -13,7 +13,7 @@ const productSchema = z.object({
     .regex(/^\d+(\.\d{1,2})?$/, "Invalid price format"),
   image: z
     .any()
-    .optional(), // placeholder until backend supports images
+    .optional(),
 });
 
 export type ProductFormValues = z.infer<typeof productSchema>;
@@ -94,7 +94,7 @@ export function ProductForm({
 
       <div className="space-y-1">
         <label className="block text-sm font-medium text-slate-100">
-          Image (coming soon)
+          Image
         </label>
         <input
           type="file"
