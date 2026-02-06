@@ -32,3 +32,7 @@ Thumbs.db
 /frontend/.next
 /frontend/out
 
+# Uploaded files
+/backend/uploads
+/frontend/uploads
+

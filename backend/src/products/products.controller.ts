@@ -8,7 +8,9 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +21,9 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -96,6 +101,19 @@ export class ProductsController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/products',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(
+            Math.random() * 1e9,
+          )}`;
+          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new product (requires authentication)' })
   @ApiResponse({
@@ -117,12 +135,32 @@ export class ProductsController {
     description: 'Unauthorized - JWT token required',
   })
   @ApiBody({ type: CreateProductDto })
-  async create(@Body() dto: CreateProductDto) {
-    return this.productsService.create(dto);
+  async create(
+    @Body() dto: CreateProductDto,
+    @UploadedFile() file?: { filename: string },
+  ) {
+    const appOrigin = process.env.APP_ORIGIN || 'http://localhost:3000';
+    const imageUrl = file
+      ? `${appOrigin}/uploads/products/${file.filename}`
+      : undefined;
+    return this.productsService.create(dto, imageUrl);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: './uploads/products',
+        filename: (req, file, cb) => {
+          const uniqueSuffix = `${Date.now()}-${Math.round(
+            Math.random() * 1e9,
+          )}`;
+          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update a product (requires authentication)' })
   @ApiParam({
@@ -157,8 +195,13 @@ export class ProductsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateProductDto,
+    @UploadedFile() file?: { filename: string },
   ) {
-    return this.productsService.update(id, dto);
+    const appOrigin = process.env.APP_ORIGIN || 'http://localhost:3000';
+    const imageUrl = file
+      ? `${appOrigin}/uploads/products/${file.filename}`
+      : undefined;
+    return this.productsService.update(id, dto, imageUrl);
   }
 
   @UseGuards(JwtAuthGuard)

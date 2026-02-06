@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
+import { existsSync, unlinkSync } from 'fs';
+import { join } from 'path';
 import { Product } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -20,11 +22,12 @@ export class ProductsService {
     private readonly productsRepository: Repository<Product>,
   ) {}
 
-  async create(dto: CreateProductDto): Promise<Product> {
+  async create(dto: CreateProductDto, imageUrl?: string): Promise<Product> {
     try {
       const product = this.productsRepository.create({
         ...dto,
         price: dto.price.toString(),
+        imageUrl: imageUrl ?? null,
       });
       return await this.productsRepository.save(product);
     } catch (error) {
@@ -115,13 +118,48 @@ export class ProductsService {
     return product;
   }
 
-  async update(id: number, dto: UpdateProductDto): Promise<Product> {
+  async update(
+    id: number,
+    dto: UpdateProductDto,
+    imageUrl?: string,
+  ): Promise<Product> {
     try {
       const product = await this.findOne(id);
+
+      // Delete old image file if a new image is being uploaded
+      if (
+        imageUrl !== undefined &&
+        product.imageUrl &&
+        product.imageUrl !== imageUrl
+      ) {
+        try {
+          const urlParts = product.imageUrl.split('/');
+          const filename = urlParts[urlParts.length - 1];
+          const imagePath = join(
+            process.cwd(),
+            'uploads',
+            'products',
+            filename,
+          );
+
+          if (existsSync(imagePath)) {
+            unlinkSync(imagePath);
+            this.logger.log(`Deleted old image file: ${imagePath}`);
+          }
+        } catch (fileError) {
+          this.logger.warn(
+            `Failed to delete old image file for product ${id}: ${fileError}`,
+          );
+        }
+      }
+
       Object.assign(product, {
         ...dto,
         price: dto.price !== undefined ? dto.price.toString() : product.price,
       });
+      if (imageUrl !== undefined) {
+        product.imageUrl = imageUrl;
+      }
       return await this.productsRepository.save(product);
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -143,6 +181,32 @@ export class ProductsService {
   async remove(id: number): Promise<void> {
     try {
       const product = await this.findOne(id);
+
+      // Delete associated image file if it exists
+      if (product.imageUrl) {
+        try {
+          // Extract filename from imageUrl (format: http://localhost:3000/uploads/products/filename.ext)
+          const urlParts = product.imageUrl.split('/');
+          const filename = urlParts[urlParts.length - 1];
+          const imagePath = join(
+            process.cwd(),
+            'uploads',
+            'products',
+            filename,
+          );
+
+          if (existsSync(imagePath)) {
+            unlinkSync(imagePath);
+            this.logger.log(`Deleted image file: ${imagePath}`);
+          }
+        } catch (fileError) {
+          // Log error but don't fail the product deletion if image deletion fails
+          this.logger.warn(
+            `Failed to delete image file for product ${id}: ${fileError}`,
+          );
+        }
+      }
+
       await this.productsRepository.remove(product);
     } catch (error) {
       if (error instanceof NotFoundException) {

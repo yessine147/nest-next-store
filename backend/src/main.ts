@@ -2,12 +2,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Security: Helmet sets various HTTP headers to help protect the app
   app.use(
@@ -21,8 +23,15 @@ async function bootstrap() {
         },
       },
       crossOriginEmbedderPolicy: false, // Allow Swagger UI to work
+      // Allow images and other static assets to be embedded cross-origin
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
+
+  // Serve static files for uploaded images
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   // CORS configuration
   app.enableCors({
