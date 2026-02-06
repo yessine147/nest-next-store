@@ -110,7 +110,9 @@ jobs:
             sleep 2
           done
           echo "❌ Backend failed to start"
+          echo "Checking backend logs..."
           curl -v http://localhost:3000/api || true
+          ps aux | grep node || true
           exit 1
 
       - name: Build frontend
@@ -123,6 +125,7 @@ jobs:
         working-directory: ./frontend
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:3000/api
+          PORT: 3001
         run: npm start &
         continue-on-error: false
 

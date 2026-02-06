@@ -18,6 +18,7 @@ describe('ProductsController', () => {
     price: '99.99',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
+    imageUrl: null,
   };
 
   beforeEach(async () => {
@@ -119,7 +120,7 @@ describe('ProductsController', () => {
 
       const result = await controller.create(createDto);
 
-      expect(productsService.create).toHaveBeenCalledWith(createDto);
+      expect(productsService.create).toHaveBeenCalledWith(createDto, undefined);
       expect(result).toEqual(mockProduct);
     });
   });
@@ -135,7 +136,11 @@ describe('ProductsController', () => {
 
       const result = await controller.update(1, updateDto);
 
-      expect(productsService.update).toHaveBeenCalledWith(1, updateDto);
+      expect(productsService.update).toHaveBeenCalledWith(
+        1,
+        updateDto,
+        undefined,
+      );
       expect(result).toEqual(updatedProduct);
     });
 

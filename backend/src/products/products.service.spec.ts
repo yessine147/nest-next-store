@@ -16,6 +16,7 @@ describe('ProductsService', () => {
     name: 'Test Product',
     description: 'Test Description',
     price: '99.99',
+    imageUrl: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   };
@@ -64,6 +65,7 @@ describe('ProductsService', () => {
         name: 'Test Product',
         description: 'Test Description',
         price: '99.99',
+        imageUrl: null,
       });
       expect(repository.save).toHaveBeenCalledWith(mockProduct);
       expect(result).toEqual(mockProduct);
