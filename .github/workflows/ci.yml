@@ -10,6 +10,7 @@ jobs:
   backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -35,6 +36,15 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: backend/package-lock.json
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "PostgreSQL is unavailable - sleeping"
+            sleep 1
+          done
+          echo "PostgreSQL is ready!"
 
       - name: Install dependencies
         working-directory: ./backend
@@ -70,6 +80,14 @@ jobs:
           PORT: 3000
         run: npm test -- src/auth/auth-users.integration.spec.ts
 
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 7
+
       - name: Build
         working-directory: ./backend
         env:
@@ -84,6 +102,7 @@ jobs:
   frontend:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -120,6 +139,14 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
       - name: Install Playwright browsers
         working-directory: ./frontend
         run: npx playwright install --with-deps chromium
@@ -150,17 +177,28 @@ jobs:
         run: npm run start:prod &
         continue-on-error: false
 
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "PostgreSQL is unavailable - sleeping"
+            sleep 1
+          done
+          echo "PostgreSQL is ready!"
+
       - name: Wait for backend to be ready
         run: |
+          echo "Waiting for backend server to be ready..."
           for i in {1..30}; do
             if curl -f http://localhost:3000/api > /dev/null 2>&1; then
-              echo "Backend is ready!"
+              echo "✅ Backend is ready!"
               exit 0
             fi
-            echo "Waiting for backend... ($i/30)"
+            echo "⏳ Waiting for backend... ($i/30)"
             sleep 2
           done
-          echo "Backend failed to start"
+          echo "❌ Backend failed to start"
+          curl -v http://localhost:3000/api || true
           exit 1
 
       - name: Build frontend
@@ -179,15 +217,17 @@ jobs:
 
       - name: Wait for frontend to be ready
         run: |
+          echo "Waiting for frontend server to be ready..."
           for i in {1..30}; do
             if curl -f http://localhost:3001 > /dev/null 2>&1; then
-              echo "Frontend is ready!"
+              echo "✅ Frontend is ready!"
               exit 0
             fi
-            echo "Waiting for frontend... ($i/30)"
+            echo "⏳ Waiting for frontend... ($i/30)"
             sleep 2
           done
-          echo "Frontend failed to start"
+          echo "❌ Frontend failed to start"
+          curl -v http://localhost:3001 || true
           exit 1
 
       - name: Run linter
@@ -200,10 +240,19 @@ jobs:
           E2E_BASE_URL: http://localhost:3001
         run: npm run test:e2e
 
-      - name: Upload test results
+      - name: Upload Playwright test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-test-results
           path: frontend/test-results/
           retention-days: 30
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report
+          path: frontend/playwright-report/
+          retention-days: 30
+          if-no-files-found: ignore

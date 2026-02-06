@@ -41,6 +41,15 @@ jobs:
           cache: "npm"
           cache-dependency-path: backend/package-lock.json
 
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "PostgreSQL is unavailable - sleeping"
+            sleep 1
+          done
+          echo "PostgreSQL is ready!"
+
       - name: Install dependencies
         working-directory: ./backend
         run: npm ci
@@ -85,3 +94,11 @@ jobs:
           DB_NAME: nest_next_store_test
           JWT_SECRET: test-jwt-secret-key-for-ci
         run: npm run build
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 7
