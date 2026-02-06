@@ -36,3 +36,8 @@ Thumbs.db
 /backend/uploads
 /frontend/uploads
 
+# Test results
+frontend/test-results/
+frontend/playwright-report/
+frontend/playwright/.cache/
+
